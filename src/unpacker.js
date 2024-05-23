@@ -31,31 +31,19 @@ class Unpacker {
 		/** @private */ this._i = 0;
 
 		if(typeof process !== "undefined" && typeof process?.versions?.node === "string") {
-			const { StringDecoder } = require("node:string_decoder");
-			const utfDecoder = new StringDecoder("utf8");
-			const latinDecoder = new StringDecoder("latin1");
-			/** @private */ this._u = utfDecoder.write.bind(utfDecoder);
-			/** @private */ this._l = latinDecoder.write.bind(latinDecoder);
-			/** @private */ this._T = 15; // StringDecoder is super fast
-			if(!this._decompressor) { this._decompressor = "zlib"; }
+      // NOTE(jyc) Disable or React Native/Expo will fail to bundle.
+      throw Error("unsupported: node");
 		} else {
 			const utfDecoder = new TextDecoder("utf8");
-			const latinDecoder = new TextDecoder("latin1");
 			this._u = utfDecoder.decode.bind(utfDecoder);
-			this._l = latinDecoder.decode.bind(latinDecoder);
 			this._T = 32;
-			if(typeof navigator === "object") {
-				const agent = navigator.userAgent;
-				if(agent.includes("Firefox")) { this._T = 4; } // for some reason firefox is stupid slow at manual decoding
-				else if(agent.includes("Chrome")) { this._T = 200; } // manual decoding is super fast in chrome
-			}
 			if(!this._decompressor) { this._decompressor = "decompressionstream"; }
 		}
 
 		/** @private */ this._atoms = options.atomTable ?? {
 			true: true,
 			false: false,
-			undefined: undefined,
+			undefined,
 			null: null,
 			nil: null,
 			nan: NaN,
@@ -94,9 +82,8 @@ class Unpacker {
 			const size = (data[i + 1] << 24) + (data[i + 2] << 16) + (data[i + 3] << 8) + data[i + 4];
 			const raw = data.subarray(i + 5, i + 5 + size);
 			if(this._decompressor === "zlib") {
-				const zlib = require("zlib");
-				const decomp = zlib.inflateSync(raw);
-				return this.unpack(decomp);
+        // NOTE(jyc) Disable or React Native/Expo will fail to bundle.
+        throw Error("unsupported: zlib");
 			} else if(this._decompressor === "decompressionstream") {
 				// @ts-expect-error missing from webstreams types?
 				// eslint-disable-next-line no-undef
@@ -106,7 +93,7 @@ class Unpacker {
 				writer.ready.then(() => writer.write(raw)).then(() => writer.ready).then(() => writer.close());
 				return this._decompressorStreamOut(reader).then(data => this.unpack(data));
 			} else if(typeof this._decompressor === "function") {
-				let decomp = this._decompressor(raw);
+				const decomp = this._decompressor(raw);
 				if(decomp instanceof Promise) {
 					return decomp.then(data => this.unpack(data));
 				}
@@ -362,7 +349,7 @@ class Unpacker {
 		if(length < this._T) {
 			const l = i + length;
 			while(i < l) {
-				let byte = this._d[i++];
+				const byte = this._d[i++];
 				if(byte < 128) { str += String.fromCharCode(byte); }
 				else if(byte < 224) { str += String.fromCharCode(((byte & 31) << 6) + (data[i++] & 63)); }
 				else if(byte < 240) { str += String.fromCharCode(((byte & 15) << 12) + ((data[i++] & 63) << 6) + (data[i++] & 63)); }
@@ -385,18 +372,8 @@ class Unpacker {
 	 * @param {number} length 
 	 */
 	_latin(length) {
-		let str = "";
-		let i = this._i;
-		const data = this._d;
-		if(length < this._T) {
-			for(let n = i; n < i + length; n++) {
-				str += String.fromCharCode(data[n]);
-			}
-		} else {
-			str = this._l(data.subarray(i, i + length));
-		}
-		this._i += length;
-		return str;
+    // NOTE(jyc) Disable because @EvanBacon/text-decoder doesn't support latin1.
+    throw Error("unsupported: latin1");
 	}
 
 	/**

@@ -52,20 +52,12 @@ class Packer {
 			this._b = null;
 			this._T = 32;
 			if(this._compressor === true) { this._compressor = "compressionstream"; }
-			if(typeof navigator === "object") {
-				const agent = navigator.userAgent;
-				if(agent.includes("Firefox")) { this._T = 128; } // firefox is slower at manual encoding
-				else if(agent.includes("Chrome")) { this._T = 540; } // manual encoding is super fast in chrome
-			}
 		}
 
 		if(this._compressor) {
 			if(this._compressor === "zlib") {
-				const zlib = require("zlib");
-				/** @private */ this._z = (/** @type {Uint8Array} */ raw) => {
-					const comp = zlib.deflateSync(raw);
-					return this._compressorOut(comp);
-				};
+        // NOTE(jyc) Disable or React Native/Expo will fail to bundle.
+        throw Error("unsupported: zlib");
 			} else if(this._compressor === "compressionstream") {
 				this._z = (/** @type {Uint8Array} */ raw) => {
 					// @ts-expect-error missing from webstreams types?
@@ -79,7 +71,7 @@ class Packer {
 			} else if(typeof this._compressor === "function") {
 				const fn = this._compressor;
 				this._z = (/** @type {Uint8Array} */ raw) => {
-					let comp = fn(raw);
+					const comp = fn(raw);
 					if(comp instanceof Promise) {
 						return comp.then(this._compressorOut);
 					}

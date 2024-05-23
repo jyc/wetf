@@ -14,17 +14,8 @@ export class Unpacker {
 		this._sv = new DataView(this._sd.buffer, this._sd.byteOffset, this._sd.length);
 		this._i = 0;
 		if (typeof process !== "undefined" && typeof process?.versions?.node === "string") {
-			const {
-				StringDecoder
-			} = require("node:string_decoder");
-			const utfDecoder = new StringDecoder("utf8");
-			const latinDecoder = new StringDecoder("latin1");
-			this._u = utfDecoder.write.bind(utfDecoder);
-			this._l = latinDecoder.write.bind(latinDecoder);
-			this._T = 15;
-			if (!this._decompressor) {
-				this._decompressor = "zlib";
-			}
+      // NOTE(jyc) Disable for React Native/Expo.
+      throw Error("unsupported");
 		} else {
 			const utfDecoder = new TextDecoder("utf8");
 			const latinDecoder = new TextDecoder("latin1");
@@ -46,7 +37,7 @@ export class Unpacker {
 		this._atoms = options.atomTable ?? {
 			true: true,
 			false: false,
-			undefined: undefined,
+			undefined,
 			null: null,
 			nil: null,
 			nan: NaN,
@@ -91,7 +82,7 @@ export class Unpacker {
 				writer.ready.then(() => writer.write(raw)).then(() => writer.ready).then(() => writer.close());
 				return this._decompressorStreamOut(reader).then(data => this.unpack(data));
 			} else if (typeof this._decompressor === "function") {
-				let decomp = this._decompressor(raw);
+				const decomp = this._decompressor(raw);
 				if (decomp instanceof Promise) {
 					return decomp.then(data => this.unpack(data));
 				}
@@ -353,7 +344,7 @@ export class Unpacker {
 		if (length < this._T) {
 			const l = i + length;
 			while (i < l) {
-				let byte = this._d[i++];
+				const byte = this._d[i++];
 				if (byte < 128) {
 					str += String.fromCharCode(byte);
 				} else if (byte < 224) {
@@ -375,7 +366,7 @@ export class Unpacker {
 	}
 	_latin(length) {
 		let str = "";
-		let i = this._i;
+		const i = this._i;
 		const data = this._d;
 		if (length < this._T) {
 			for (let n = i; n < i + length; n++) {
